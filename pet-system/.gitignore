@@ -1,0 +1,15 @@
+# Maven build output
+target/
+
+# VS Code settings
+.vscode/
+.settings/
+.classpath
+.project
+
+# Mac/Windows system files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

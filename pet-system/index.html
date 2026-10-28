@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pet Search</title>
+</head>
+<body>
+    <h2>Search Pets by Species</h2>
+    <input type="text" id="species" placeholder="e.g. cat">
+    <button onclick="search()">Search</button>
+    <div id="result" style="margin-top: 20px; color: blue; font-weight: bold;"></div>
+
+    <script>
+        async function search() {
+            const species = document.getElementById('species').value;
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerText = "Loading...";
+            try {
+                const response = await fetch(`/pet-system/api/pets/search?species=${species}`);
+                const data = await response.json();
+                if (response.ok) {
+                    resultDiv.innerText = "Found: " + data.join(", ");
+                } else {
+                    resultDiv.style.color = "red";
+                    resultDiv.innerText = "Error: " + (data.error || data.message);
+                }
+            } catch (error) {
+                resultDiv.innerText = "Network Error";
+            }
+        }
+    </script>
+</body>
+</html>

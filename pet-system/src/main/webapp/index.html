@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Pet Management System</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .section { margin-bottom: 20px; border: 1px solid #ccc; padding: 15px; border-radius: 5px; }
+        input, button { padding: 8px; margin: 5px 0; }
+        .error { color: red; font-weight: bold; }
+        .success { color: green; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h2>Pet Management System</h2>
+
+    <div class="section">
+        <h3>Add New Pet</h3>
+        <input type="text" id="petName" placeholder="Pet Name (e.g., Tom)">
+        <input type="text" id="petSpecies" placeholder="Species (e.g., cat)">
+        <button onclick="addPet()">Add Pet</button>
+        <div id="addResult"></div>
+    </div>
+
+    <div class="section">
+        <h3>Search Pets</h3>
+        <input type="text" id="searchSpecies" placeholder="Enter species (e.g., cat)">
+        <button onclick="searchPets()">Search</button>
+        <div id="searchResult"></div>
+    </div>
+
+    <script>
+        // Connect to WebSocket server for real-time updates
+        const ws = new WebSocket("ws://localhost:8080/pet-system/pet-updates");
+        
+        ws.onmessage = function(event) {
+            // Show an alert when a message is received
+            alert("Real-time Update: " + event.data);
+            
+            // Automatically trigger a search if the user is currently searching for something
+            const currentSearch = document.getElementById('searchSpecies').value;
+            if (currentSearch) {
+                searchPets();
+            }
+        };
+
+        async function addPet() {
+            const name = document.getElementById('petName').value;
+            const species = document.getElementById('petSpecies').value;
+            const resultDiv = document.getElementById('addResult');
+            resultDiv.innerText = "Adding...";
+
+            const formData = new URLSearchParams();
+            formData.append('name', name);
+            formData.append('species', species);
+
+            try {
+                const response = await fetch('/pet-system/api/pets', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: formData
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    resultDiv.className = 'success';
+                    resultDiv.innerText = data.message;
+                    document.getElementById('petName').value = ''; 
+                    document.getElementById('petSpecies').value = '';
+                } else {
+                    resultDiv.className = 'error';
+                    resultDiv.innerText = "Error: " + (data.error || "Failed");
+                }
+            } catch (error) {
+                resultDiv.className = 'error';
+                resultDiv.innerText = "Network Error";
+            }
+        }
+
+        async function searchPets() {
+            const species = document.getElementById('searchSpecies').value;
+            const resultDiv = document.getElementById('searchResult');
+            resultDiv.innerText = "Loading...";
+            
+            try {
+                const response = await fetch(`/pet-system/api/pets/search?species=${species}`);
+                const data = await response.json();
+                if (response.ok) {
+                    resultDiv.className = 'success';
+                    resultDiv.innerText = "Found: " + data.join(", ");
+                } else {
+                    resultDiv.className = 'error';
+                    resultDiv.innerText = "Error: " + (data.error || data.message);
+                }
+            } catch (error) {
+                resultDiv.className = 'error';
+                resultDiv.innerText = "Network Error";
+            }
+        }
+    </script>
+</body>
+</html>
