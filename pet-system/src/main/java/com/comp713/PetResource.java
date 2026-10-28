@@ -1,10 +1,22 @@
 package com.comp713;
 
+import java.util.List;
+
+import jakarta.annotation.Resource;
 import jakarta.inject.Inject;
-import jakarta.ws.rs.*;
+import jakarta.jms.ConnectionFactory;
+import jakarta.jms.JMSContext;
+import jakarta.jms.Queue;
+import jakarta.ws.rs.Consumes;
+import jakarta.ws.rs.FormParam;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.POST;
+import jakarta.ws.rs.PUT;
+import jakarta.ws.rs.Path;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import java.util.List;
 
 @Path("/pets")
 @Produces(MediaType.APPLICATION_JSON)
@@ -12,6 +24,13 @@ public class PetResource {
 
     @Inject
     PetRepository repository;
+
+  
+    @Resource(lookup = "jms/PetConnectionFactory")
+    private ConnectionFactory connectionFactory;
+
+    @Resource(lookup = "jms/PetQueue")
+    private Queue petQueue;
 
     @GET
     @Path("/search")
@@ -39,9 +58,18 @@ public class PetResource {
         boolean success = repository.addPet(name, species);
         
         if (success) {
-            // Trigger WebSocket broadcast to notify all connected web clients
+            
             PetUpdateSocket.broadcast("New pet added: " + name + " (" + species + ")");
             
+          
+            try (JMSContext context = connectionFactory.createContext("admin", "admin")) {
+                String eventMessage = "EVENT: Pet " + name + " (" + species + ") is added to the system!";
+                context.createProducer().send(petQueue, eventMessage);
+                System.out.println("✅ [Payara] JMS Message Sent to Artemis: " + eventMessage);
+            } catch (Exception e) {
+                System.out.println("❌ [Payara] JMS Send Failed: " + e.getMessage());
+            }
+
             return Response.status(Response.Status.CREATED)
                            .entity("{\"message\": \"Pet added successfully\"}").build();
         }
